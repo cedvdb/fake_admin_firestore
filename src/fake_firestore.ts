@@ -1,5 +1,5 @@
 import mergeDeep from 'deepmerge';
-import { CollectionGroup, CollectionReference, DocumentSnapshot, Firestore, Query, SetOptions, WriteResult } from 'firebase-admin/firestore';
+import { CollectionGroup, CollectionReference, DocumentReference, DocumentSnapshot, Firestore, Query, SetOptions, WriteResult } from 'firebase-admin/firestore';
 import { FakeFirestoreCollectionData, FakeFirestoreCollectionGroupData, FakeFirestoreDocumentData } from './fake_firestore_data';
 import { UnimplementedCollection } from './base/unimplemented_collection';
 import { UnimplementedDocument as UnimplementedDocumentRef, UnimplementedDocumentSnapshot } from './base/unimplemented_document';
@@ -18,21 +18,23 @@ export class FakeFirestore extends UnimplementedFirestore implements Firestore {
 
   override collectionGroup(collectionId: string): FirebaseFirestore.CollectionGroup<FirebaseFirestore.DocumentData> {
     // find level collections
-    const foundCollections = this._walkCollectionTree(collectionId, this._data);
+    const foundCollectionGroupData = this._walkCollectionTree(collectionId, this._data);
+    const fakeCollection = new FakeCollectionRef<FirebaseFirestore.DocumentData>(foundCollectionGroupData);
+    return new FakeCollectionGroup<FirebaseFirestore.DocumentData>(fakeCollection);
   }
 
-  private _walkCollectionTree(collectionId: string, currentLevelCollections: FakeFirestoreCollectionGroupData): FakeFirestoreCollectionData[] {
+  private _walkCollectionTree(collectionId: string, currentLevelCollections: FakeFirestoreCollectionGroupData): FakeFirestoreCollectionData {
     const keys = Object.keys(this._data);
-    const foundCollections: FakeFirestoreCollectionData[] = [];
+    const foundCollections: FakeFirestoreCollectionData = {};
     keys.forEach(key => {
       if (key == collectionId) {
         const collection = currentLevelCollections[key];
-        foundCollections.push(collection);
+        Object.keys(collection).forEach(key => foundCollections[key] = collection[key]);
         const documents = Object.values(collection);
         documents.forEach((doc) => {
           const subcollections = this._walkCollectionTree(collectionId, doc.collections || {});
-          if (subcollections.length > 0) {
-            foundCollections.push(...subcollections);
+          if (Object.keys(subcollections).length > 0) {
+            Object.keys(subcollections).forEach(key => foundCollections[key] = subcollections[key]);
           }
         });
       }
@@ -89,7 +91,7 @@ class FakeCollectionGroup<T> extends UnimplementedCollectionGroup<T> implements 
 }
 
 
-class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements CollectionReference<T> {
+class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements DocumentReference<T> {
   constructor(
     private _id: string,
     private _documentData: FakeFirestoreDocumentData<T>,

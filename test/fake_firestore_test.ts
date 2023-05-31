@@ -18,6 +18,7 @@ describe('FakeFirestore', () => {
 
 describe('FakeCollection', () => {
   it('should find document', () => { });
+  it('should convert document');
   it('should add document');
   describe('Query', () => {
     it('should filter with >');
