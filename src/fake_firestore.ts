@@ -1,12 +1,13 @@
 import mergeDeep from 'deepmerge';
-import { Query, WriteResult } from 'firebase-admin/firestore';
+import { CollectionGroup, CollectionReference, DocumentSnapshot, Firestore, Query, SetOptions, WriteResult } from 'firebase-admin/firestore';
 import { FakeFirestoreCollectionData, FakeFirestoreCollectionGroupData, FakeFirestoreDocumentData } from './fake_firestore_data';
 import { UnimplementedCollection } from './base/unimplemented_collection';
 import { UnimplementedDocument as UnimplementedDocumentRef, UnimplementedDocumentSnapshot } from './base/unimplemented_document';
 import { UnimplementedFirestore } from './base/unimplemented_firestore';
 import { UnimplementedQuery } from './base/unimplemented_query';
+import { UnimplementedCollectionGroup } from './base/unimplemented_collection_group';
 
-export class FakeFirestore extends UnimplementedFirestore {
+export class FakeFirestore extends UnimplementedFirestore implements Firestore {
   constructor(private _data: FakeFirestoreCollectionGroupData) {
     super();
   }
@@ -14,15 +15,39 @@ export class FakeFirestore extends UnimplementedFirestore {
   override collection(collectionPath: string): FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData> {
     return new FakeCollectionRef(this._data[collectionPath]);
   }
+
+  override collectionGroup(collectionId: string): FirebaseFirestore.CollectionGroup<FirebaseFirestore.DocumentData> {
+    // find level collections
+    const foundCollections = this._walkCollectionTree(collectionId, this._data);
+  }
+
+  private _walkCollectionTree(collectionId: string, currentLevelCollections: FakeFirestoreCollectionGroupData): FakeFirestoreCollectionData[] {
+    const keys = Object.keys(this._data);
+    const foundCollections: FakeFirestoreCollectionData[] = [];
+    keys.forEach(key => {
+      if (key == collectionId) {
+        const collection = currentLevelCollections[key];
+        foundCollections.push(collection);
+        const documents = Object.values(collection);
+        documents.forEach((doc) => {
+          const subcollections = this._walkCollectionTree(collectionId, doc.collections || {});
+          if (subcollections.length > 0) {
+            foundCollections.push(...subcollections);
+          }
+        });
+      }
+    });
+    return foundCollections;
+  }
 }
 
-class FakeCollectionRef<T> extends UnimplementedCollection<T> {
+class FakeCollectionRef<T> extends UnimplementedCollection<T> implements CollectionReference<T> {
 
   constructor(private _collectionData: FakeFirestoreCollectionData<T>) {
     super();
   }
 
-  doc(id?: any): FirebaseFirestore.DocumentReference<T> {
+  override doc(id?: any): FirebaseFirestore.DocumentReference<T> {
     const data = this._collectionData[id];
     return new FakeDocumentRef<T>(
       id,
@@ -30,6 +55,12 @@ class FakeCollectionRef<T> extends UnimplementedCollection<T> {
       (id, data) => this._onCreate(id, data),
       (id, _) => this._onDelete(id)
     );
+  }
+
+  override withConverter<U>(converter: FirebaseFirestore.FirestoreDataConverter<U>): CollectionReference<U>;
+  override withConverter(converter: null): CollectionReference<FirebaseFirestore.DocumentData>;
+  override withConverter<U>(converter: unknown): CollectionReference<FirebaseFirestore.DocumentData> | CollectionReference<U> {
+    // TODO
   }
 
   private _onCreate(id: string, documentData: FakeFirestoreDocumentData<T>) {
@@ -42,12 +73,73 @@ class FakeCollectionRef<T> extends UnimplementedCollection<T> {
 
   override where(fieldPath: string | FirebaseFirestore.FieldPath, opStr: FirebaseFirestore.WhereFilterOp, value: any): Query<T>;
   override where(filter: FirebaseFirestore.Filter): Query<T>;
-  override where(fieldPath: any, opStr?: FirebaseFirestore.WhereFilterOp, value?: any): Query<T> {
+  override where(fieldPath: string | FirebaseFirestore.FieldPath, opStr?: FirebaseFirestore.WhereFilterOp, value?: any): Query<T> {
     return new FakeQuery(this._collectionData).where(fieldPath, opStr || '==', value);
   }
 }
 
-class FakeQuery<T> extends UnimplementedQuery<T> {
+class FakeCollectionGroup<T> extends UnimplementedCollectionGroup<T> implements CollectionGroup<T> {
+  constructor(private _collection: FakeCollectionRef<T>) { super(); }
+
+  override where(fieldPath: string | FirebaseFirestore.FieldPath, opStr: FirebaseFirestore.WhereFilterOp, value: any): Query<T>;
+  override where(filter: FirebaseFirestore.Filter): Query<T>;
+  override where(fieldPath: string | FirebaseFirestore.FieldPath, opStr?: FirebaseFirestore.WhereFilterOp, value?: any): Query<T> {
+    return this._collection.where(fieldPath, opStr || '==', value);
+  }
+}
+
+
+class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements CollectionReference<T> {
+  constructor(
+    private _id: string,
+    private _documentData: FakeFirestoreDocumentData<T>,
+    private _onCreate: (id: string, data: FakeFirestoreDocumentData<T>) => void,
+    private _onDelete: (id: string, data: FakeFirestoreDocumentData<T>) => void,
+  ) {
+    super();
+  }
+
+  override async get() {
+    return new FakeDocumentSnapshot(this._documentData.data);
+  }
+
+  override async set(data: any, options?: SetOptions): Promise<FirebaseFirestore.WriteResult> {
+    if (options && ((options as any).merge || (options as any).mergeFields)) {
+      this._documentData.data = mergeDeep(
+        this._documentData.data,
+        data,
+      );
+    } else {
+      this._documentData.data = {
+        ...this._documentData.data,
+        ...data,
+      };
+    }
+    return {} as unknown as FirebaseFirestore.WriteResult;
+  }
+
+  override async create(data: T): Promise<WriteResult> {
+    this._onCreate(this._id, this._documentData);
+    return {} as unknown as FirebaseFirestore.WriteResult;
+  }
+
+  override async delete(precondition?: FirebaseFirestore.Precondition | undefined): Promise<WriteResult> {
+    this._onDelete(this._id, this._documentData);
+    return {} as unknown as FirebaseFirestore.WriteResult;
+  }
+}
+
+class FakeDocumentSnapshot<T> extends UnimplementedDocumentSnapshot<T> implements DocumentSnapshot<T> {
+  constructor(
+    private _data?: T,
+  ) { super(); }
+
+  data(): T | undefined {
+    return this._data ? { ...this._data } : undefined;
+  }
+}
+
+class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
   constructor(
     private _collectionData: FakeFirestoreCollectionData<T>,
   ) { super(); }
@@ -159,50 +251,5 @@ class FakeQuery<T> extends UnimplementedQuery<T> {
     if (value == undefined) {
       throw `field path ${fieldPath} not found`;
     }
-  }
-
-
-}
-
-class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> {
-  constructor(
-    private _id: string,
-    private _documentData: FakeFirestoreDocumentData<T>,
-    private _onCreate: (id: string, data: FakeFirestoreDocumentData<T>) => void,
-    private _onDelete: (id: string, data: FakeFirestoreDocumentData<T>) => void,
-  ) {
-    super();
-  }
-
-  override async get() {
-    return new FakeDocumentSnapshot(this._documentData.data);
-  }
-
-  override async set(data: any, options?: unknown): Promise<FirebaseFirestore.WriteResult> {
-    this._documentData.data = mergeDeep(
-      this._documentData.data,
-      data,
-    );
-    return {} as unknown as FirebaseFirestore.WriteResult;
-  }
-
-  override async create(data: T): Promise<WriteResult> {
-    this._onCreate(this._id, this._documentData);
-    return {} as unknown as FirebaseFirestore.WriteResult;
-  }
-
-  override async delete(precondition?: FirebaseFirestore.Precondition | undefined): Promise<WriteResult> {
-    this._onDelete(this._id, this._documentData);
-    return {} as unknown as FirebaseFirestore.WriteResult;
-  }
-}
-
-class FakeDocumentSnapshot<T> extends UnimplementedDocumentSnapshot<T> {
-  constructor(
-    private _data?: T,
-  ) { super(); }
-
-  data(): T | undefined {
-    return this._data ? { ...this._data } : undefined;
   }
 }

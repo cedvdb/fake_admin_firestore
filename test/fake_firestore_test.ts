@@ -4,7 +4,6 @@ import { describe, it, } from 'node:test';
 import { FakeFirestore } from '../src';
 
 
-
 describe('FakeFirestore', () => {
   it('should implement firestore', () => {
     const firestore: Firestore = new FakeFirestore({ accounts: {} });
@@ -33,7 +32,6 @@ describe('FakeCollection', () => {
     it('should filter with not-in');
   });
 });
-
 
 describe('FakeDocument', () => {
   it('should know if it exists');
