@@ -4,7 +4,7 @@
   "description": "in memory firstore for testing ",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "globstar -- node --loader tsx --test \"test/**/*_test.ts\""
   },
   "dependencies": {
     "firebase-admin": "^11.8.0",
@@ -12,7 +12,9 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.1",
-    "mocha": "10.2.0"
+    "mocha": "10.2.0",
+    "globstar": "1.0.0",
+    "tsx": "3.12.7"
   },
   "author": "",
   "license": "ISC"

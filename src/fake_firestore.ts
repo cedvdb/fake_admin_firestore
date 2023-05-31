@@ -8,8 +8,11 @@ import { UnimplementedQuery } from './base/unimplemented_query';
 import { UnimplementedCollectionGroup } from './base/unimplemented_collection_group';
 
 export class FakeFirestore extends UnimplementedFirestore implements Firestore {
-  constructor(private _data: FakeFirestoreCollectionGroupData) {
+  private _data: FakeFirestoreCollectionGroupData;
+
+  constructor(data: FakeFirestoreCollectionGroupData) {
     super();
+    this._data = JSON.parse(JSON.stringify(data)); // copy
   }
 
   override collection(collectionPath: string): FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData> {
@@ -62,7 +65,7 @@ class FakeCollectionRef<T> extends UnimplementedCollection<T> implements Collect
   override withConverter<U>(converter: FirebaseFirestore.FirestoreDataConverter<U>): CollectionReference<U>;
   override withConverter(converter: null): CollectionReference<FirebaseFirestore.DocumentData>;
   override withConverter<U>(converter: unknown): CollectionReference<FirebaseFirestore.DocumentData> | CollectionReference<U> {
-    // TODO
+    return new FakeCollectionRef<U>(this._collectionData);
   }
 
   private _onCreate(id: string, documentData: FakeFirestoreDocumentData<T>) {
@@ -92,6 +95,8 @@ class FakeCollectionGroup<T> extends UnimplementedCollectionGroup<T> implements 
 
 
 class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements DocumentReference<T> {
+
+
   constructor(
     private _id: string,
     private _documentData: FakeFirestoreDocumentData<T>,
@@ -99,6 +104,10 @@ class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements Document
     private _onDelete: (id: string, data: FakeFirestoreDocumentData<T>) => void,
   ) {
     super();
+  }
+
+  override get id() {
+    return this._id;
   }
 
   override async get() {
@@ -136,8 +145,12 @@ class FakeDocumentSnapshot<T> extends UnimplementedDocumentSnapshot<T> implement
     private _data?: T,
   ) { super(); }
 
-  data(): T | undefined {
+  override data(): T | undefined {
     return this._data ? { ...this._data } : undefined;
+  }
+
+  override get exists(): boolean {
+    return this._data != undefined;
   }
 }
 
