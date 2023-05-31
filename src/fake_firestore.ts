@@ -85,17 +85,16 @@ class FakeCollectionRef<T> extends UnimplementedCollection<T> implements Collect
   }
 
   private _onCreate(id: string, documentData: FakeFirestoreDocumentData<T>) {
-    this._collectionData = { ...this._collectionData, [id]: documentData };
+    this._collectionData[id] = documentData;
   }
 
   private _onUpdate(id: string, documentData: FakeFirestoreDocumentData<T>) {
-    this._collectionData = { ...this._collectionData, [id]: documentData };
+    // nothing to do
   }
 
   private _onDelete(id: string) {
-    const data = { ...this._collectionData };
-    delete data[id];
-    this._collectionData = data;
+    delete this._collectionData[id];
+    console.log(Object.keys(this._collectionData));
   }
 
   override where(fieldPath: string | FirebaseFirestore.FieldPath, opStr: FirebaseFirestore.WhereFilterOp, value: any): Query<T>;
@@ -143,16 +142,19 @@ class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements Document
 
   override async set(data: any, options?: SetOptions): Promise<FirebaseFirestore.WriteResult> {
     if (options && ((options as any).merge || (options as any).mergeFields)) {
-      this._documentData.data = mergeDeep(
+      const newData: T = mergeDeep(
         this._documentData.data,
         data,
       );
+      this._documentData.data = newData;
     } else {
-      this._documentData.data = {
+      const newData: T = {
         ...this._documentData.data,
         ...data,
       };
+      this._documentData.data = newData;
     }
+    this._onUpdate(this._id, this._documentData);
     return {} as unknown as FirebaseFirestore.WriteResult;
   }
 

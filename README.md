@@ -14,7 +14,7 @@ This package contains an in memory admin/firestore intended to be used in testin
     - doc
       - get
       - create
-      - set
+      - set  (FieldValue unsupported)
       - delete
     - where
       - limit

@@ -2,14 +2,15 @@ import { CollectionReference, DocumentReference, Firestore } from 'firebase-admi
 import assert from 'node:assert';
 import { describe, it, beforeEach } from 'node:test';
 import { FakeFirestore } from '../src';
-import { Account, Animal, petAppData } from './data';
+import { Account, Animal, Park, petAppData } from './data';
 
 let firestore: Firestore;
 
 
-beforeEach(() => firestore = new FakeFirestore(petAppData));
 
 describe('FakeFirestore', () => {
+  beforeEach(() => firestore = new FakeFirestore(petAppData));
+
   it('should implement firestore', () => {
     const collection: CollectionReference = firestore.collection('accounts');
     const document: DocumentReference = collection.doc('user-id-1');
@@ -32,6 +33,7 @@ describe('FakeFirestore', () => {
 describe('FakeCollection', () => {
   let accounts: CollectionReference;
   beforeEach(() => accounts = firestore.collection('accounts'));
+  beforeEach(() => firestore = new FakeFirestore(petAppData));
 
   it('should find document', async () => {
     const document = accounts.doc('user-id-1');
@@ -61,7 +63,10 @@ describe('FakeCollection', () => {
     const docs = await accounts.get();
     assert.equal(docs.size, 3);
   });
+
   describe('Query', () => {
+    beforeEach(() => firestore = new FakeFirestore(petAppData));
+
     it('should filter with >', async () => {
       const foundAccounts = await accounts.where('age', '>', 10).get();
       assert.equal(foundAccounts.docs.length, 1);
@@ -131,9 +136,10 @@ describe('FakeCollection', () => {
 
 describe('FakeDocument', () => {
   let accounts: CollectionReference;
+  beforeEach(() => firestore = new FakeFirestore(petAppData));
   beforeEach(() => accounts = firestore.collection('accounts'));
 
-  it('should know if it exists', async () => {
+  it('should know its existence', async () => {
     const account = await accounts.doc('user-id-1').get();
     assert.equal(account.exists, true);
   });
@@ -151,18 +157,30 @@ describe('FakeDocument', () => {
     assert.equal(allAccounts.size, 3);
   });
 
-  it('should set', async () => {
-    await accounts.doc('user-id-1').set({ age: 21 });
-    const account = await accounts.doc('user-id-1').get();
-    assert.equal(account.data()?.age, 21);
-    await firestore.collection('parks').doc('park-id-1').set({ age: 21 });
-    const account = await accounts.doc('user-id-1').get();
-    assert.equal(account.data()?.age, 21);
-  });
-
   it('should delete', async () => {
     await accounts.doc('user-id-1').delete();
     const allAccounts = await accounts.get();
     assert.equal(allAccounts.size, 1);
   });
+
+  describe('set', () => {
+    beforeEach(() => firestore = new FakeFirestore(petAppData));
+
+    it('should set when field is a root field', async () => {
+      await accounts.doc('user-id-1').set({ age: 21 });
+      const account = await accounts.doc('user-id-1').get();
+      assert.equal(account.data()?.age, 21);
+    });
+
+    it('should merge when field is nested and merge is true', async () => {
+      await firestore.collection('parks').doc('park-id-1').set(
+        { animalPolicy: { favoriteAnimal: Animal.cat } },
+        { merge: true }
+      );
+      const park = await firestore.collection('parks').doc('park-id-1').get();
+      assert.equal(park.data()?.animalPolicy.favoriteAnimal, Animal.cat);
+      assert.deepStrictEqual(park.data()?.animalPolicy.acceptedAnimals, [Animal.dog, Animal.cat]);
+    });
+  });
+
 });
