@@ -6,6 +6,7 @@ import { UnimplementedDocument as UnimplementedDocumentRef, UnimplementedDocumen
 import { UnimplementedFirestore } from './base/unimplemented_firestore';
 import { UnimplementedQuery } from './base/unimplemented_query';
 import { UnimplementedCollectionGroup } from './base/unimplemented_collection_group';
+import { UnimplementedQuerySnapshot } from './base/unimplemented_query_snapshot';
 
 export class FakeFirestore extends UnimplementedFirestore implements Firestore {
   private _data: FakeFirestoreCollectionGroupData;
@@ -50,7 +51,6 @@ class FakeCollectionRef<T> extends UnimplementedCollection<T> implements Collect
 
   constructor(
     private _collectionData: FakeFirestoreCollectionData<T>,
-    private _converter: FirebaseFirestore.FirestoreDataConverter<T>,
   ) {
     super();
   }
@@ -65,10 +65,14 @@ class FakeCollectionRef<T> extends UnimplementedCollection<T> implements Collect
     );
   }
 
+  override async get(): Promise<FirebaseFirestore.QuerySnapshot<T>> {
+    return new FakeQuerySnapshot(this._collectionData);
+  }
+
   override withConverter<U>(converter: FirebaseFirestore.FirestoreDataConverter<U>): CollectionReference<U>;
   override withConverter(converter: null): CollectionReference<FirebaseFirestore.DocumentData>;
   override withConverter<U>(converter: unknown): CollectionReference<FirebaseFirestore.DocumentData> | CollectionReference<U> {
-    return new FakeCollectionRef<U>(this._collectionData);
+    return this as unknown as CollectionReference<U>;
   }
 
   private _onCreate(id: string, documentData: FakeFirestoreDocumentData<T>) {
@@ -89,6 +93,10 @@ class FakeCollectionRef<T> extends UnimplementedCollection<T> implements Collect
 class FakeCollectionGroup<T> extends UnimplementedCollectionGroup<T> implements CollectionGroup<T> {
   constructor(private _collection: FakeCollectionRef<T>) { super(); }
 
+  get(): Promise<FirebaseFirestore.QuerySnapshot<T>> {
+    return this._collection.get();
+  }
+
   override where(fieldPath: string | FirebaseFirestore.FieldPath, opStr: FirebaseFirestore.WhereFilterOp, value: any): Query<T>;
   override where(filter: FirebaseFirestore.Filter): Query<T>;
   override where(fieldPath: string | FirebaseFirestore.FieldPath, opStr?: FirebaseFirestore.WhereFilterOp, value?: any): Query<T> {
@@ -102,7 +110,6 @@ class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements Document
 
   constructor(
     private _id: string,
-    private _converter: FirestoreDataConverter<T>,
     private _documentData: FakeFirestoreDocumentData<T>,
     private _onCreate: (id: string, data: FakeFirestoreDocumentData<T>) => void,
     private _onDelete: (id: string, data: FakeFirestoreDocumentData<T>) => void,
@@ -115,7 +122,7 @@ class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements Document
   }
 
   override async get() {
-    return new FakeDocumentSnapshot(this._documentData.data);
+    return new FakeDocumentSnapshot(this._id, this._documentData.data);
   }
 
   override async set(data: any, options?: SetOptions): Promise<FirebaseFirestore.WriteResult> {
@@ -146,22 +153,22 @@ class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements Document
   override withConverter<U>(converter: FirestoreDataConverter<U>): DocumentReference<U>;
   override withConverter(converter: null): DocumentReference<DocumentData>;
   override withConverter<U>(converter: unknown): DocumentReference<DocumentData> | DocumentReference<U> {
-    return new FakeDocumentRef(this._id, this._converter, this._documentData, this._onCreate, this._onDelete);
+    return this as unknown as DocumentReference<U>;
   }
 }
 
-class FakeDocumentSnapshot<T> extends UnimplementedDocumentSnapshot<T> implements DocumentSnapshot<T> {
+class FakeDocumentSnapshot<T> extends UnimplementedDocumentSnapshot<T> implements QueryDocumentSnapshot<T> {
   constructor(
-    private _data?: T,
-    private _converter: FirestoreDataConverter<T>,
+    private _id: string,
+    private _data: T,
   ) { super(); }
 
-  override data(): T | undefined {
-    if (!this._data) return undefined;
-    if (this._converter) {
-      return this._converter.fromFirestore(QueryDocumentSnapshot)
-    }
-    return this._data ? { ...this._data } : undefined;
+  override get id(): string {
+    return this._id;
+  }
+
+  override data(): T {
+    return this._data as T;
   }
 
   override get exists(): boolean {
@@ -170,11 +177,39 @@ class FakeDocumentSnapshot<T> extends UnimplementedDocumentSnapshot<T> implement
 
 }
 
+export class FakeQueryDocumentSnapshot<T> extends FakeDocumentSnapshot<T> implements QueryDocumentSnapshot<T> {
+  data(): T {
+    return super.data() as T;
+  }
+}
+
+class FakeQuerySnapshot<T> extends UnimplementedQuerySnapshot<T> {
+  constructor(
+    private _collectionData: FakeFirestoreCollectionData<T>,
+  ) { super(); }
+
+  override get size(): number {
+    return Object.keys(this._collectionData).length;
+  }
+
+  override get empty(): boolean {
+    return this.size == 0;
+  }
+
+  override get docs(): QueryDocumentSnapshot<T>[] {
+    return Object.entries(this._collectionData).map(([id, value]) => new FakeDocumentSnapshot<T>(id, value.data));
+  }
+}
+
 class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
   constructor(
     private _collectionData: FakeFirestoreCollectionData<T>,
   ) { super(); }
 
+
+  override async get(): Promise<FirebaseFirestore.QuerySnapshot<T>> {
+    return new FakeQuerySnapshot(this._collectionData);
+  }
 
   override limit(limit: number): FirebaseFirestore.Query<T> {
     const limitedData = Object.keys(this._collectionData).slice(0, limit).reduce((acc, key) => {
@@ -263,7 +298,7 @@ class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
   }
 
   private _filterData(fieldPath: string, comparator: (a: any) => boolean): FakeFirestoreCollectionData<T> {
-    return Object.keys(this._collectionData)
+    const data = Object.keys(this._collectionData)
       .reduce((acc, key) => {
         const documentData = this._collectionData[key];
         const dataValue = this._accessValue(documentData.data, fieldPath);
@@ -272,15 +307,17 @@ class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
         }
         return acc;
       }, {} as Record<string, FakeFirestoreDocumentData<T>>);
+    return data;
   }
 
   private _accessValue(object: any, fieldPath: string) {
     const parts = fieldPath.split('.');
     const value = parts.reduce((acc, part) => {
       return acc[part];
-    }, undefined as any);
+    }, object);
     if (value == undefined) {
       throw `field path ${fieldPath} not found`;
     }
+    return value;
   }
 }

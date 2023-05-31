@@ -67,16 +67,16 @@ export class UnimplementedDocumentSnapshot<T> implements DocumentSnapshot<T> {
   get id(): string {
     throw new Error('Method not implemented.');
   }
-  get createTime(): FirebaseFirestore.Timestamp | undefined {
+  get createTime(): FirebaseFirestore.Timestamp {
     throw new Error('Method not implemented.');
   }
-  get updateTime(): FirebaseFirestore.Timestamp | undefined {
+  get updateTime(): FirebaseFirestore.Timestamp {
     throw new Error('Method not implemented.');
   }
   get readTime(): FirebaseFirestore.Timestamp {
     throw new Error('Method not implemented.');
   }
-  data(): T | undefined {
+  data(): T {
     throw new Error('Method not implemented.');
   }
   get(fieldPath: string | FirebaseFirestore.FieldPath) {
@@ -85,5 +85,5 @@ export class UnimplementedDocumentSnapshot<T> implements DocumentSnapshot<T> {
   isEqual(other: DocumentSnapshot<T>): boolean {
     throw new Error('Method not implemented.');
   }
-
 }
+

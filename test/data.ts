@@ -4,7 +4,7 @@ export enum Animal {
   snake = 'snake',
 }
 
-export interface Person {
+export interface Account {
   name: string;
   age: number;
   likes: Animal[];
@@ -27,7 +27,7 @@ export const petAppData = {
         name: 'cedric',
         age: 30,
         likes: [Animal.cat, Animal.dog]
-      } as Person,
+      } as Account,
       collections: {
         pets: {
           'pet-id-1': {
@@ -43,9 +43,9 @@ export const petAppData = {
     'user-id-2': {
       data: {
         name: 'Jake',
-        age: 30,
+        age: 10,
         likes: [Animal.snake, Animal.dog],
-      } as Person,
+      } as Account,
       collections: {
         pets: {
           'pet-id-2': {
@@ -62,7 +62,14 @@ export const petAppData = {
   parks: {
     'park-id-1': {
       data: {
-        acceptedAnimals: [Animal.dog],
+        acceptedAnimals: [Animal.dog, Animal.cat],
+        favoriteAnimal: Animal.dog
+      } as Park
+    },
+    'park-id-2': {
+      data: {
+        acceptedAnimals: [Animal.snake],
+        favoriteAnimal: Animal.snake
       } as Park
     }
   }
