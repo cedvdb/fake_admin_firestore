@@ -15,8 +15,6 @@ This package contains an in memory admin/firestore intended to be used in testin
       - get
       - create
       - set
-      - update
-        - FieldValue
       - delete
     - where
       - limit

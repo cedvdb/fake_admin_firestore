@@ -17,7 +17,10 @@ export interface Pet {
 }
 
 export interface Park {
-  acceptedAnimals: Animal[];
+  animalPolicy: {
+    acceptedAnimals: Animal[];
+    favoriteAnimal: Animal;
+  }
 }
 
 export const petAppData = {
@@ -62,14 +65,18 @@ export const petAppData = {
   parks: {
     'park-id-1': {
       data: {
-        acceptedAnimals: [Animal.dog, Animal.cat],
-        favoriteAnimal: Animal.dog
+        animalPolicy: {
+          acceptedAnimals: [Animal.dog, Animal.cat],
+          favoriteAnimal: Animal.dog
+        }
       } as Park
     },
     'park-id-2': {
       data: {
-        acceptedAnimals: [Animal.snake],
-        favoriteAnimal: Animal.snake
+        animalPolicy: {
+          acceptedAnimals: [Animal.snake],
+          favoriteAnimal: Animal.snake
+        }
       } as Park
     }
   }

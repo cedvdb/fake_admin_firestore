@@ -7,6 +7,7 @@ import { UnimplementedFirestore } from './base/unimplemented_firestore';
 import { UnimplementedQuery } from './base/unimplemented_query';
 import { UnimplementedCollectionGroup } from './base/unimplemented_collection_group';
 import { UnimplementedQuerySnapshot } from './base/unimplemented_query_snapshot';
+import { randomUUID } from 'crypto';
 
 export class FakeFirestore extends UnimplementedFirestore implements Firestore {
   private _data: FakeFirestoreCollectionGroupData;
@@ -28,22 +29,23 @@ export class FakeFirestore extends UnimplementedFirestore implements Firestore {
   }
 
   private _walkCollectionTree(collectionId: string, currentLevelCollections: FakeFirestoreCollectionGroupData): FakeFirestoreCollectionData {
-    const keys = Object.keys(this._data);
-    const foundCollections: FakeFirestoreCollectionData = {};
-    keys.forEach(key => {
+    const foundData: FakeFirestoreCollectionData = {};
+    // for each key in the collection group level ...
+    Object.keys(currentLevelCollections).forEach(key => {
+      const collection = currentLevelCollections[key];
+      // add the collection data if it matches the id
       if (key == collectionId) {
-        const collection = currentLevelCollections[key];
-        Object.keys(collection).forEach(key => foundCollections[key] = collection[key]);
-        const documents = Object.values(collection);
-        documents.forEach((doc) => {
-          const subcollections = this._walkCollectionTree(collectionId, doc.collections || {});
-          if (Object.keys(subcollections).length > 0) {
-            Object.keys(subcollections).forEach(key => foundCollections[key] = subcollections[key]);
-          }
-        });
+        Object.keys(collection).forEach(key => foundData[key] = collection[key]);
       }
+      const documents = Object.values(collection);
+      documents.forEach((doc) => {
+        const subcollections = this._walkCollectionTree(collectionId, doc.collections || {});
+        if (Object.keys(subcollections).length > 0) {
+          Object.keys(subcollections).forEach(key => foundData[key] = subcollections[key]);
+        }
+      });
     });
-    return foundCollections;
+    return foundData;
   }
 }
 
@@ -61,12 +63,19 @@ class FakeCollectionRef<T> extends UnimplementedCollection<T> implements Collect
       id,
       data,
       (id, data) => this._onCreate(id, data),
+      (id, data) => this._onUpdate(id, data),
       (id, _) => this._onDelete(id)
     );
   }
 
   override async get(): Promise<FirebaseFirestore.QuerySnapshot<T>> {
     return new FakeQuerySnapshot(this._collectionData);
+  }
+
+  override async add(data: FirebaseFirestore.WithFieldValue<T>): Promise<DocumentReference<T>> {
+    const id = randomUUID();
+    this._collectionData = { ...this._collectionData, [id]: { data: data as T } };
+    return this.doc(id);
   }
 
   override withConverter<U>(converter: FirebaseFirestore.FirestoreDataConverter<U>): CollectionReference<U>;
@@ -76,11 +85,17 @@ class FakeCollectionRef<T> extends UnimplementedCollection<T> implements Collect
   }
 
   private _onCreate(id: string, documentData: FakeFirestoreDocumentData<T>) {
-    this._collectionData[id] = documentData;
+    this._collectionData = { ...this._collectionData, [id]: documentData };
+  }
+
+  private _onUpdate(id: string, documentData: FakeFirestoreDocumentData<T>) {
+    this._collectionData = { ...this._collectionData, [id]: documentData };
   }
 
   private _onDelete(id: string) {
-    delete this._collectionData[id];
+    const data = { ...this._collectionData };
+    delete data[id];
+    this._collectionData = data;
   }
 
   override where(fieldPath: string | FirebaseFirestore.FieldPath, opStr: FirebaseFirestore.WhereFilterOp, value: any): Query<T>;
@@ -112,6 +127,7 @@ class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements Document
     private _id: string,
     private _documentData: FakeFirestoreDocumentData<T>,
     private _onCreate: (id: string, data: FakeFirestoreDocumentData<T>) => void,
+    private _onUpdate: (id: string, data: FakeFirestoreDocumentData<T>) => void,
     private _onDelete: (id: string, data: FakeFirestoreDocumentData<T>) => void,
   ) {
     super();
@@ -289,9 +305,9 @@ class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
       }
       case 'not-in': {
         if (!(value instanceof Array)) {
-          return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => !value.includes(dataValue),),) as Query<T>;
+          throw 'using not-in with non array value';
         }
-        throw 'using not-in with non array value';
+        return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => !value.includes(dataValue),),) as Query<T>;
       }
     }
     throw new Error(`${opStr} not implemented.`);

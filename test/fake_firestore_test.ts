@@ -31,7 +31,7 @@ describe('FakeFirestore', () => {
 
 describe('FakeCollection', () => {
   let accounts: CollectionReference;
-  beforeEach(() => accounts = firestore.collection('accounts'))
+  beforeEach(() => accounts = firestore.collection('accounts'));
 
   it('should find document', async () => {
     const document = accounts.doc('user-id-1');
@@ -57,7 +57,9 @@ describe('FakeCollection', () => {
       likes: [],
       name: 'Timmy',
     }
-    accounts.add(account);
+    await accounts.add(account);
+    const docs = await accounts.get();
+    assert.equal(docs.size, 3);
   });
   describe('Query', () => {
     it('should filter with >', async () => {
@@ -114,13 +116,13 @@ describe('FakeCollection', () => {
     });
 
     it('should filter with in', async () => {
-      const parks = await accounts.where('favoriteAnimal', 'in', [Animal.cat, Animal.snake]).get();
+      const parks = await firestore.collection('parks').where('animalPolicy.favoriteAnimal', 'in', [Animal.cat, Animal.snake]).get();
       assert.equal(parks.docs.length, 1);
       assert.equal(parks.docs[0].id, 'park-id-2');
     });
 
     it('should filter with not-in', async () => {
-      const parks = await accounts.where('favoriteAnimal', 'not-in', [Animal.cat, Animal.snake]).get();
+      const parks = await firestore.collection('parks').where('animalPolicy.favoriteAnimal', 'not-in', [Animal.cat, Animal.snake]).get();
       assert.equal(parks.docs.length, 1);
       assert.equal(parks.docs[0].id, 'park-id-1');
     });
@@ -128,10 +130,39 @@ describe('FakeCollection', () => {
 });
 
 describe('FakeDocument', () => {
-  it('should know if it exists');
-  it('should have data');
-  it('should create');
-  it('should set');
-  it('should update');
-  it('should delete');
+  let accounts: CollectionReference;
+  beforeEach(() => accounts = firestore.collection('accounts'));
+
+  it('should know if it exists', async () => {
+    const account = await accounts.doc('user-id-1').get();
+    assert.equal(account.exists, true);
+  });
+
+  it('should have data', async () => {
+    const account = await accounts.doc('user-id-1').get();
+    assert.deepStrictEqual(account.data(), petAppData.accounts['user-id-1'].data);
+  });
+
+  it('should create', async () => {
+    await accounts.doc('user-id-3').create({
+      age: 2, likes: [], name: 'Joseph'
+    } as Account);
+    const allAccounts = await accounts.get();
+    assert.equal(allAccounts.size, 3);
+  });
+
+  it('should set', async () => {
+    await accounts.doc('user-id-1').set({ age: 21 });
+    const account = await accounts.doc('user-id-1').get();
+    assert.equal(account.data()?.age, 21);
+    await firestore.collection('parks').doc('park-id-1').set({ age: 21 });
+    const account = await accounts.doc('user-id-1').get();
+    assert.equal(account.data()?.age, 21);
+  });
+
+  it('should delete', async () => {
+    await accounts.doc('user-id-1').delete();
+    const allAccounts = await accounts.get();
+    assert.equal(allAccounts.size, 1);
+  });
 });
