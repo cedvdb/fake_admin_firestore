@@ -1,10 +1,10 @@
 import mergeDeep from 'deepmerge';
 import { Query, WriteResult } from 'firebase-admin/firestore';
 import { FakeFirestoreCollectionData, FakeFirestoreCollectionGroupData, FakeFirestoreDocumentData } from './fake_firestore_data';
-import { UnimplementedCollection } from './unimplemented_collection';
-import { UnimplementedDocument as UnimplementedDocumentRef, UnimplementedDocumentSnapshot } from './unimplemented_document';
-import { UnimplementedFirestore } from './unimplemented_firestore';
-import { UnimplementedQuery } from './unimplemented_query';
+import { UnimplementedCollection } from './base/unimplemented_collection';
+import { UnimplementedDocument as UnimplementedDocumentRef, UnimplementedDocumentSnapshot } from './base/unimplemented_document';
+import { UnimplementedFirestore } from './base/unimplemented_firestore';
+import { UnimplementedQuery } from './base/unimplemented_query';
 
 export class FakeFirestore extends UnimplementedFirestore {
   constructor(private _data: FakeFirestoreCollectionGroupData) {
