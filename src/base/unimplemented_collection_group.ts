@@ -3,7 +3,9 @@ import { CollectionGroup } from 'firebase-admin/firestore';
 
 
 export class UnimplementedCollectionGroup<T> implements CollectionGroup<T> {
-  firestore: FirebaseFirestore.Firestore;
+  get firestore(): FirebaseFirestore.Firestore {
+    throw new Error('Method not implemented.');
+  }
 
   getPartitions(desiredPartitionCount: number): AsyncIterable<FirebaseFirestore.QueryPartition<T>> {
     throw new Error('Method not implemented.');

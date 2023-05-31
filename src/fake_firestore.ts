@@ -1,5 +1,5 @@
 import mergeDeep from 'deepmerge';
-import { CollectionGroup, CollectionReference, DocumentReference, DocumentSnapshot, Firestore, Query, SetOptions, WriteResult } from 'firebase-admin/firestore';
+import { CollectionGroup, CollectionReference, DocumentData, DocumentReference, DocumentSnapshot, Firestore, FirestoreDataConverter, Query, QueryDocumentSnapshot, SetOptions, WriteResult } from 'firebase-admin/firestore';
 import { FakeFirestoreCollectionData, FakeFirestoreCollectionGroupData, FakeFirestoreDocumentData } from './fake_firestore_data';
 import { UnimplementedCollection } from './base/unimplemented_collection';
 import { UnimplementedDocument as UnimplementedDocumentRef, UnimplementedDocumentSnapshot } from './base/unimplemented_document';
@@ -48,7 +48,10 @@ export class FakeFirestore extends UnimplementedFirestore implements Firestore {
 
 class FakeCollectionRef<T> extends UnimplementedCollection<T> implements CollectionReference<T> {
 
-  constructor(private _collectionData: FakeFirestoreCollectionData<T>) {
+  constructor(
+    private _collectionData: FakeFirestoreCollectionData<T>,
+    private _converter: FirebaseFirestore.FirestoreDataConverter<T>,
+  ) {
     super();
   }
 
@@ -99,6 +102,7 @@ class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements Document
 
   constructor(
     private _id: string,
+    private _converter: FirestoreDataConverter<T>,
     private _documentData: FakeFirestoreDocumentData<T>,
     private _onCreate: (id: string, data: FakeFirestoreDocumentData<T>) => void,
     private _onDelete: (id: string, data: FakeFirestoreDocumentData<T>) => void,
@@ -138,20 +142,32 @@ class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements Document
     this._onDelete(this._id, this._documentData);
     return {} as unknown as FirebaseFirestore.WriteResult;
   }
+
+  override withConverter<U>(converter: FirestoreDataConverter<U>): DocumentReference<U>;
+  override withConverter(converter: null): DocumentReference<DocumentData>;
+  override withConverter<U>(converter: unknown): DocumentReference<DocumentData> | DocumentReference<U> {
+    return new FakeDocumentRef(this._id, this._converter, this._documentData, this._onCreate, this._onDelete);
+  }
 }
 
 class FakeDocumentSnapshot<T> extends UnimplementedDocumentSnapshot<T> implements DocumentSnapshot<T> {
   constructor(
     private _data?: T,
+    private _converter: FirestoreDataConverter<T>,
   ) { super(); }
 
   override data(): T | undefined {
+    if (!this._data) return undefined;
+    if (this._converter) {
+      return this._converter.fromFirestore(QueryDocumentSnapshot)
+    }
     return this._data ? { ...this._data } : undefined;
   }
 
   override get exists(): boolean {
     return this._data != undefined;
   }
+
 }
 
 class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
