@@ -28,6 +28,14 @@ describe('FakeFirestore', () => {
     assert.equal(petsDocs.size, 2);
   });
 
+  it('should run a transaction', async () => {
+    await firestore.runTransaction(async (transaction) => {
+      const accountSnapshot = await transaction.get(firestore.collection('accounts').doc('user-id-1'));
+      transaction.set(accountSnapshot.ref, { age: 7 })
+    });
+
+  });
+
 });
 
 describe('FakeCollection', () => {

@@ -49,7 +49,7 @@ const firestore: Firestore = new FakeFirestore({
       - orderBy
   - collectionGroup
     - where
-  - runTransaction
+  - runTransaction: (no roll back)
 
 Note on data conversion:
 
