@@ -2,10 +2,12 @@
   "name": "fake_admin_firestore",
   "version": "0.0.1",
   "description": "in memory firstore for testing ",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
-    "test": "globstar -- node --loader tsx --test \"test/**/*_test.ts\""
+    "test": "globstar -- node --loader tsx --test \"test/**/*_test.ts\"",
+    "prepublish": "tsc"
   },
   "dependencies": {
     "firebase-admin": "^11.8.0",
