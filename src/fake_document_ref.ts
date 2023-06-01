@@ -1,5 +1,5 @@
 import mergeDeep from 'deepmerge';
-import { DocumentData, DocumentReference, FirestoreDataConverter, SetOptions, WriteResult } from 'firebase-admin/firestore';
+import { DocumentData, DocumentReference, DocumentSnapshot, FirestoreDataConverter, SetOptions, WriteResult } from 'firebase-admin/firestore';
 import { UnimplementedDocument as UnimplementedDocumentRef } from './base/unimplemented_document';
 import { FakeFirestoreDocumentData } from './fake_firestore_data';
 import { FakeDocumentSnapshot } from './fake_document_snapshot';
@@ -21,8 +21,8 @@ export class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements D
     return this._id;
   }
 
-  override async get() {
-    return new FakeDocumentSnapshot(this._id, this._documentData.data, this);
+  override async get(): Promise<DocumentSnapshot<T>> {
+    return new FakeDocumentSnapshot(this, this._documentData.data);
   }
 
   override async set(data: any, options?: SetOptions): Promise<FirebaseFirestore.WriteResult> {

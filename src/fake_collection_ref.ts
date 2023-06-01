@@ -26,7 +26,10 @@ export class FakeCollectionRef<T> extends UnimplementedCollection<T> implements 
   }
 
   override async get(): Promise<FirebaseFirestore.QuerySnapshot<T>> {
-    return new FakeQuerySnapshot(this._collectionData);
+    return new FakeQuerySnapshot(
+      Object.keys(this._collectionData),
+      (id) => this.doc(id),
+    );
   }
 
   override async add(data: FirebaseFirestore.WithFieldValue<T>): Promise<DocumentReference<T>> {

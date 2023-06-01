@@ -9,6 +9,7 @@ export class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
     private _collectionData: FakeFirestoreCollectionData<T>,
   ) { super(); }
 
+
   override async get(): Promise<FirebaseFirestore.QuerySnapshot<T>> {
     return new FakeQuerySnapshot(this._collectionData);
   }
