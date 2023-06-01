@@ -4,6 +4,34 @@
 
 This package contains an in memory admin/firestore intended to be used in testing scenarii.
 
+# Usage
+
+```ts
+const firestore: Firestore = new FakeFirestore({
+  accounts: {
+    'user-id-1': {
+      data: {
+        name: 'cedric',
+        age: 30,
+        likes: ['cat', 'dog']
+      },
+      // sub collections
+      collections: {
+        pets: {
+          'pet-id-1': {
+            data: {
+              name: 'Pita',
+              age: 3,
+              animal: 'cat',
+            }
+          }
+        },
+      },
+    },
+  }
+});
+```
+
 # Implemented features
 
 

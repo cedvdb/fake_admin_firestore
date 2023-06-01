@@ -1,8 +1,8 @@
 import { CollectionReference, DocumentReference, Firestore } from 'firebase-admin/firestore';
 import assert from 'node:assert';
-import { describe, it, beforeEach } from 'node:test';
+import { beforeEach, describe, it } from 'node:test';
 import { FakeFirestore } from '../src';
-import { Account, Animal, Park, petAppData } from './data';
+import { Account, Animal, petAppData } from './data';
 
 let firestore: Firestore;
 
