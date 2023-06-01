@@ -39,7 +39,9 @@ const firestore: Firestore = new FakeFirestore({
   - collection
     - withConverter : this is a no operation conversion, it does nothing
     - add
+    - get
     - doc
+      - collection
       - get
       - create
       - set  (FieldValue unsupported)

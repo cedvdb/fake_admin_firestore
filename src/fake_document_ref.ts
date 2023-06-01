@@ -3,6 +3,7 @@ import { DocumentData, DocumentReference, DocumentSnapshot, FirestoreDataConvert
 import { UnimplementedDocument as UnimplementedDocumentRef } from './base/unimplemented_document';
 import { FakeFirestoreDocumentData } from './fake_firestore_data';
 import { FakeDocumentSnapshot } from './fake_document_snapshot';
+import { FakeCollectionRef } from './fake_collection_ref';
 
 export class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements DocumentReference<T> {
 
@@ -19,6 +20,18 @@ export class FakeDocumentRef<T> extends UnimplementedDocumentRef<T> implements D
 
   override get id() {
     return this._id;
+  }
+
+  override collection(collectionPath: string): FirebaseFirestore.CollectionReference<DocumentData> {
+    let subcollections = this._documentData.collections;
+    if (subcollections == undefined) {
+      subcollections = {};
+      this._documentData.collections = subcollections;
+    }
+    if (subcollections[collectionPath] == undefined) {
+      subcollections[collectionPath] = {};
+    }
+    return new FakeCollectionRef(subcollections[collectionPath]);
   }
 
   override async get(): Promise<DocumentSnapshot<T>> {

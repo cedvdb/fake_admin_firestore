@@ -14,12 +14,22 @@ describe('FakeFirestore', () => {
   it('should implement firestore', () => {
     const collection: CollectionReference = firestore.collection('accounts');
     const document: DocumentReference = collection.doc('user-id-1');
-    assert(document != undefined);
+    assert.notEqual(document, undefined);
   });
 
   it('should find collection', () => {
     const accounts = firestore.collection('accounts');
-    assert(accounts != undefined);
+    assert.notEqual(accounts, undefined);
+    const undefinedCollection = firestore.collection('undefined');
+    assert.notEqual(undefinedCollection, undefined);
+  });
+
+  it('should find subcollection', () => {
+    const accounts = firestore.collection('accounts');
+    const pets = accounts.doc('user-id-1').collection('pets');
+    assert.notEqual(pets, undefined);
+    const undefinedCollection = accounts.doc('user-id-1').collection('undefined');
+    assert.notEqual(undefinedCollection, undefined);
   });
 
   it('should find collectionGroup', async () => {
