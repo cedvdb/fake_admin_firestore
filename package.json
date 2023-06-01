@@ -6,6 +6,9 @@
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "test": "globstar -- node --loader tsx --test \"test/**/*_test.ts\"",
     "prepublish": "tsc"
