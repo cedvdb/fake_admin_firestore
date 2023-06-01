@@ -1,7 +1,7 @@
 {
   "name": "fake_admin_firestore",
   "version": "0.0.1",
-  "description": "in memory firstore for testing ",
+  "description": "in memory firebase admin/firestore for testing ",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
