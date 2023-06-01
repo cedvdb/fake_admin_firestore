@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "in memory firstore for testing ",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "globstar -- node --loader tsx --test \"test/**/*_test.ts\""
   },
