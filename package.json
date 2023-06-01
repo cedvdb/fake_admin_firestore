@@ -1,9 +1,10 @@
 {
   "name": "fake_admin_firestore",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "in memory firebase admin/firestore for testing ",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/cedvdb/fake_admin_firestore",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "type": "module",
   "scripts": {
     "test": "globstar -- node --loader tsx --test \"test/**/*_test.ts\"",
