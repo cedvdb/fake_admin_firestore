@@ -27,8 +27,10 @@ export class FakeCollectionRef<T> extends UnimplementedCollection<T> implements 
 
   override async get(): Promise<FirebaseFirestore.QuerySnapshot<T>> {
     return new FakeQuerySnapshot(
-      Object.keys(this._collectionData),
-      (id) => this.doc(id),
+      this._collectionData,
+      (id, data) => this._onCreate(id, data),
+      (id, data) => this._onUpdate(id, data),
+      (id, _) => this._onDelete(id)
     );
   }
 
@@ -60,6 +62,11 @@ export class FakeCollectionRef<T> extends UnimplementedCollection<T> implements 
   override where(fieldPath: string | FirebaseFirestore.FieldPath, opStr: FirebaseFirestore.WhereFilterOp, value: any): Query<T>;
   override where(filter: FirebaseFirestore.Filter): Query<T>;
   override where(fieldPath: string | FirebaseFirestore.FieldPath, opStr?: FirebaseFirestore.WhereFilterOp, value?: any): Query<T> {
-    return new FakeQuery(this._collectionData).where(fieldPath, opStr || '==', value);
+    return new FakeQuery(
+      this._collectionData,
+      (id, data) => this._onCreate(id, data),
+      (id, data) => this._onUpdate(id, data),
+      (id, _) => this._onDelete(id)
+    ).where(fieldPath, opStr || '==', value);
   }
 }

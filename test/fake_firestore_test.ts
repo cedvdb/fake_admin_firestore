@@ -31,21 +31,21 @@ describe('FakeFirestore', () => {
   it('should run a transaction', async () => {
     await firestore.runTransaction(async (transaction) => {
       const accountSnapshot = await transaction.get(firestore.collection('accounts').doc('user-id-1'));
-      transaction.set(accountSnapshot.ref, { age: 7 })
+      return transaction.set(accountSnapshot.ref, { age: 7 });
     });
-
+    const snap = await firestore.collection('accounts').doc('user-id-1').get();
+    assert.equal(snap.data()?.age, 7);
   });
 
 });
 
 describe('FakeCollection', () => {
   let accounts: CollectionReference;
-  beforeEach(() => accounts = firestore.collection('accounts'));
   beforeEach(() => firestore = new FakeFirestore(petAppData));
+  beforeEach(() => accounts = firestore.collection('accounts'));
 
   it('should find document', async () => {
     const document = accounts.doc('user-id-1');
-    assert.notEqual(document, undefined);
     assert.deepStrictEqual(document.id, 'user-id-1');
     const snapshot = await document.get();
     assert.deepStrictEqual(snapshot.data(), petAppData.accounts['user-id-1'].data)

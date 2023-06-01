@@ -7,11 +7,14 @@ import { FakeQuerySnapshot } from './fake_query_snapshot';
 export class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
   constructor(
     private _collectionData: FakeFirestoreCollectionData<T>,
+    private _onCreate: (id: string, data: FakeFirestoreDocumentData<T>) => void,
+    private _onUpdate: (id: string, data: FakeFirestoreDocumentData<T>) => void,
+    private _onDelete: (id: string, data: FakeFirestoreDocumentData<T>) => void,
   ) { super(); }
 
 
   override async get(): Promise<FirebaseFirestore.QuerySnapshot<T>> {
-    return new FakeQuerySnapshot(this._collectionData);
+    return new FakeQuerySnapshot(this._collectionData, this._onCreate, this._onUpdate, this._onDelete);
   }
 
   override limit(limit: number): FirebaseFirestore.Query<T> {
@@ -19,7 +22,7 @@ export class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
       acc[key] = this._collectionData[key];
       return acc;
     }, {} as FakeFirestoreCollectionData<T>);
-    return new FakeQuery(limitedData);
+    return new FakeQuery(limitedData, this._onCreate, this._onUpdate, this._onDelete);
   }
 
   override orderBy(
@@ -46,7 +49,7 @@ export class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
       },
       {} as FakeFirestoreCollectionData<T>
     );
-    return new FakeQuery(orderedCollectionData);
+    return new FakeQuery(orderedCollectionData, this._onCreate, this._onUpdate, this._onDelete);
   }
 
   override where(fieldPath: string | FirebaseFirestore.FieldPath, opStr: FirebaseFirestore.WhereFilterOp, value: any): Query<T>;
@@ -58,49 +61,49 @@ export class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
     switch (opStr) {
       // "<" | "<=" | "==" | "!=" | ">=" | ">" | "array-contains" | "in" | "not-in" | "array-contains-any"
       case '<':
-        return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => dataValue < value)) as Query<T>;
+        return this._filterData(fieldPath, (dataValue) => dataValue < value);
       case '<=':
-        return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => dataValue <= value)) as Query<T>;
+        return this._filterData(fieldPath, (dataValue) => dataValue <= value);
       case '==':
-        return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => dataValue == value)) as Query<T>;
+        return this._filterData(fieldPath, (dataValue) => dataValue == value);
       case '!=':
-        return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => dataValue != value)) as Query<T>;
+        return this._filterData(fieldPath, (dataValue) => dataValue != value);
       case '>=':
-        return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => dataValue >= value)) as Query<T>;
+        return this._filterData(fieldPath, (dataValue) => dataValue >= value);
       case '>':
-        return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => dataValue > value)) as Query<T>;
+        return this._filterData(fieldPath, (dataValue) => dataValue > value);
       case 'array-contains':
-        return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => {
+        return this._filterData(fieldPath, (dataValue) => {
           if (!(dataValue instanceof Array))
             throw 'using array-contains on a non array';
           return dataValue.includes(value);
-        },),) as Query<T>;
+        },);
       case 'array-contains-any':
         if (!(value instanceof Array)) {
           throw 'using in with non array value';
         }
-        return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => {
+        return this._filterData(fieldPath, (dataValue) => {
           if (dataValue instanceof Array)
             return dataValue.some(item => value.includes(item));
           throw 'using array-contains on a non array';
-        },),) as Query<T>;
+        },);
       case 'in': {
         if (!(value instanceof Array)) {
           throw 'using in with non array value';
         }
-        return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => value.includes(dataValue),),) as Query<T>;
+        return this._filterData(fieldPath, (dataValue) => value.includes(dataValue),);
       }
       case 'not-in': {
         if (!(value instanceof Array)) {
           throw 'using not-in with non array value';
         }
-        return new FakeQuery<T>(this._filterData(fieldPath, (dataValue) => !value.includes(dataValue),),) as Query<T>;
+        return this._filterData(fieldPath, (dataValue) => !value.includes(dataValue),);
       }
     }
     throw new Error(`${opStr} not implemented.`);
   }
 
-  private _filterData(fieldPath: string, comparator: (a: any) => boolean): FakeFirestoreCollectionData<T> {
+  private _filterData(fieldPath: string, comparator: (a: any) => boolean): FakeQuery<T> {
     const data = Object.keys(this._collectionData)
       .reduce((acc, key) => {
         const documentData = this._collectionData[key];
@@ -110,7 +113,7 @@ export class FakeQuery<T> extends UnimplementedQuery<T> implements Query<T> {
         }
         return acc;
       }, {} as Record<string, FakeFirestoreDocumentData<T>>);
-    return data;
+    return new FakeQuery(data, this._onCreate, this._onUpdate, this._onDelete);
   }
 
   private _accessValue(object: any, fieldPath: string) {
