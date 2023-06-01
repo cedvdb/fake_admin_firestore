@@ -53,16 +53,16 @@ const firestore: Firestore = new FakeFirestore({
 
 Note on data conversion:
 
-This library does not do data conversion, instead when dumping data to `FakeFirestore(dataDump)`, the data should be a plain old js object without Firestore special types.
+This library does not do data conversion, which is what we want: When dumping data to `FakeFirestore(dataDump)`, the data is just a json object. 
 
 # Contributing
 
-The repository adopts a diy philosophy and does not accept issues, if you need something it's diy.
+The repository adopts a diy philosophy and does not accept issues, if you need something you'll have to make a Pull request.
 
 Your pull request shall contain:
 
-  - tests for the added feature
-  - the feature (scoped, 1 PR == added 1 feature)
+  - add tests for the added feature 
+  - add the feature (scoped, 1 PR == added 1 feature)
   - increment of the package.json semver
   - added entry in CHANGELOG.md
 
