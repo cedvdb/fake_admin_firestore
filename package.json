@@ -1,6 +1,6 @@
 {
   "name": "fake_admin_firestore",
-  "version": "0.0.3",
+  "version": "0.0.3-1",
   "description": "in memory firebase admin/firestore for testing ",
   "homepage": "https://github.com/cedvdb/fake_admin_firestore",
   "main": "dist/src/index.js",
